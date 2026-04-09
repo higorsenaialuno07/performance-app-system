@@ -18,14 +18,16 @@ function Register() {
     }
 
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password: senha,
-    })
+  email: email.trim(),
+  password: password.trim(),
+  options: {
+    data: {
+      name: name.trim(),
+    },
+  },
+})
 
-    if (error) {
-      alert(error.message)
-      return
-    }
+if (error) throw error
 
     const userId = data?.user?.id
 

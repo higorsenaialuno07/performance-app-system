@@ -1,43 +1,94 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
+import AuthGuard from './components/AuthGuard.jsx'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Profile from './pages/Profile'
 import Dashboard from './pages/Dashboard'
-import { useAuth } from './contexts/AuthContext'
-
-function PrivateRoute({ children }) {
-  const { user } = useAuth()
-  return user ? children : <Navigate to="/login" replace />
-}
+import Profile from './pages/Profile'
+import Goals from './pages/Goals'
+import Activities from './pages/Activities'
+import Performance from './pages/Performance'
+import Reports from './pages/Reports'
+import Settings from './pages/Settings'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/profile"
-          element={
-            <PrivateRoute>
-              <Profile />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Navbar />
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route
+            path="/dashboard"
+            element={
+              <AuthGuard>
+                <Dashboard />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <AuthGuard>
+                <Profile />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/goals"
+            element={
+              <AuthGuard>
+                <Goals />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/activities"
+            element={
+              <AuthGuard>
+                <Activities />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/performance"
+            element={
+              <AuthGuard>
+                <Performance />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/reports"
+            element={
+              <AuthGuard>
+                <Reports />
+              </AuthGuard>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <AuthGuard>
+                <Settings />
+              </AuthGuard>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

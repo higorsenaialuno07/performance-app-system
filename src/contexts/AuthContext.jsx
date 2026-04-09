@@ -16,28 +16,34 @@ export function AuthProvider({ children }) {
       .maybeSingle()
 
     if (error) {
+      console.error('Erro ao buscar profile:', error)
       setProfile(null)
-    } else {
-      setProfile(data || null)
+      return
     }
+
+    setProfile(data || null)
   }
 
   useEffect(() => {
     const loadSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-      const currentUser = session?.user ?? null
-      setUser(currentUser)
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
 
-      if (currentUser) {
-        await fetchProfile(currentUser.id)
-      } else {
-        setProfile(null)
+        if (currentUser) {
+          await fetchProfile(currentUser.id)
+        } else {
+          setProfile(null)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar sessão:', error)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     loadSession()
@@ -57,8 +63,41 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
+
+  const signIn = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password.trim(),
+    })
+
+    console.log('LOGIN DATA:', data)
+    console.log('LOGIN ERROR:', error)
+
+    if (error) throw error
+    return data
+  }
+
+  const signUp = async (name, email, password) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: password.trim(),
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
+    })
+
+    console.log('SIGNUP DATA:', data)
+    console.log('SIGNUP ERROR:', error)
+
+    if (error) throw error
+    return data
+  }
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -66,8 +105,11 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+   <AuthContext.Provider 
+  value={{ user, profile, loading, signIn, signUp, signOut }}
+>
       {children}
     </AuthContext.Provider>
   )
@@ -75,4 +117,4 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   return useContext(AuthContext)
-}   
+}

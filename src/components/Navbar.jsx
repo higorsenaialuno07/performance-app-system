@@ -15,7 +15,14 @@ function Navbar() {
           <>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/profile">Perfil</Link>
+            <Link to="/goals">Metas</Link>
+            <Link to="/activities">Atividades</Link>
+            <Link to="/performance">Desempenho</Link>
+            <Link to="/reports">Relatórios</Link>
+            <Link to="/settings">Configurações</Link>
+
             <span className="user-name">{profile?.name || 'Usuário'}</span>
+
             <button onClick={signOut} className="btn logout">
               Sair
             </button>
