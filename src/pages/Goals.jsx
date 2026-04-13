@@ -24,10 +24,11 @@ function Goals() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      alert('Erro ao buscar metas')
-      setLoading(false)
-      return
-    }
+  console.log('ERRO AO BUSCAR METAS:', error)
+  alert('Erro ao buscar metas: ' + error.message)
+  setLoading(false)
+  return
+}
 
     setGoals(data || [])
     setLoading(false)
@@ -38,42 +39,49 @@ function Goals() {
   }, [user])
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+  e.preventDefault()
 
-    if (!title.trim()) {
-      alert('Digite o título da meta')
-      return
-    }
+  if (!title.trim()) {
+    alert('Digite o título da meta')
+    return
+  }
 
-    if (!user) {
-      alert('Usuário não encontrado')
-      return
-    }
+  if (!user) {
+    alert('Usuário não encontrado')
+    return
+  }
 
-    setSaving(true)
+  setSaving(true)
 
-    const { error } = await supabase.from('goals').insert([
+  const { data, error } = await supabase
+    .from('goals')
+    .insert([
       {
         user_id: user.id,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim() || null,
         deadline: deadline || null,
         status: 'pendente',
       },
     ])
+    .select()
 
-    setSaving(false)
+  setSaving(false)
 
-    if (error) {
-      alert('Erro ao cadastrar meta')
-      return
-    }
+  console.log('USER:', user)
+  console.log('DATA INSERT:', data)
+  console.log('ERROR INSERT:', error)
 
-    setTitle('')
-    setDescription('')
-    setDeadline('')
-    fetchGoals()
+  if (error) {
+    alert('Erro ao cadastrar meta: ' + error.message)
+    return
   }
+
+  setTitle('')
+  setDescription('')
+  setDeadline('')
+  fetchGoals()
+}
 
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm('Deseja excluir esta meta?')
@@ -86,9 +94,10 @@ function Goals() {
       .eq('id', id)
 
     if (error) {
-      alert('Erro ao excluir meta')
-      return
-    }
+  console.log(error)
+  alert('Erro ao atualizar status: ' + error.message)
+  return
+}
 
     fetchGoals()
   }
@@ -121,12 +130,15 @@ function Goals() {
           <h2>Nova Meta</h2>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <input
-              type="text"
-              placeholder="Título da meta"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <div className="input-group">
+  <label className="form-label">Título da meta</label>
+  <input
+    type="text"
+    placeholder="Digite o título da meta"
+    value={title}
+    onChange={(e) => setTitle(e.target.value)}
+  />
+</div>
 
             <textarea
               placeholder="Descrição da meta"

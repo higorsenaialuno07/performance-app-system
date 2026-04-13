@@ -11,6 +11,7 @@ function Performance() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+
   const fetchPerformanceRecords = async () => {
     if (!user) return
 
@@ -88,11 +89,18 @@ function Performance() {
     fetchPerformanceRecords()
   }
 
-  const totalRecords = records.length
-  const totalScore = records.reduce((acc, item) => acc + (Number(item.score) || 0), 0)
-  const averageScore = totalRecords > 0 ? (totalScore / totalRecords).toFixed(1) : 0
-  const bestScore = totalRecords > 0 ? Math.max(...records.map((item) => Number(item.score) || 0)) : 0
-  const lastScore = totalRecords > 0 ? records[0].score : 0
+const totalRecords = records.length
+const totalScore = records.reduce((acc, item) => acc + (Number(item.score) || 0), 0)
+const averageScore = totalRecords > 0 ? (totalScore / totalRecords).toFixed(1) : 0
+const bestScore = totalRecords > 0 ? Math.max(...records.map((item) => Number(item.score) || 0)) : 0
+const lastScore = totalRecords > 0 ? records[0].score : 0
+
+const getStatus = (score) => {
+  if (score >= 90) return 'Excelente'
+  if (score >= 70) return 'Bom'
+  if (score >= 50) return 'Regular'
+  return 'Ruim'
+}
 
   return (
     <section className="page page-column">
@@ -106,13 +114,17 @@ function Performance() {
           <h2>Novo Registro</h2>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <input
-              type="number"
-              placeholder="Pontuação"
-              value={score}
-              onChange={(e) => setScore(e.target.value)}
-            />
-
+            <div className="input-group">
+  <label className="form-label">Pontuação</label>
+  <input
+    type="number"
+    min="0"
+    max="100"
+    placeholder="Digite uma pontuação de 0 a 100"
+    value={score}
+    onChange={(e) => setScore(e.target.value)}
+  />
+</div>
             <textarea
               placeholder="Observação sobre o desempenho"
               value={observation}
@@ -162,7 +174,19 @@ function Performance() {
                   <div key={record.id} className="goal-item">
                     <div className="goal-top">
                       <h3>Pontuação: {record.score}</h3>
-                      <span className="status-badge completed">Registrado</span>
+                      <span
+  className={
+    record.score >= 90
+      ? 'status-badge status-excelente'
+      : record.score >= 70
+      ? 'status-badge status-bom'
+      : record.score >= 50
+      ? 'status-badge status-regular'
+      : 'status-badge status-ruim'
+  }
+>
+  {getStatus(record.score)}
+</span> 
                     </div>
 
                     <p className="goal-description">

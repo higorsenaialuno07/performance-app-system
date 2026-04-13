@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../services/supabase'
 
@@ -8,6 +8,35 @@ function Settings() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [notifications, setNotifications] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
+  const [publicProfile, setPublicProfile] = useState(false)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('notifications, dark_mode, public_profile')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.log('Erro ao carregar preferências:', error)
+        return
+      }
+
+      if (data) {
+        setNotifications(data.notifications || false)
+        setDarkMode(data.dark_mode || false)
+        setPublicProfile(data.public_profile || false)
+      }
+    }
+
+    fetchProfile()
+  }, [user])
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
@@ -22,22 +51,77 @@ function Settings() {
       return
     }
 
-    setLoading(true)
-
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
-
-    setLoading(false)
-
-    if (error) {
-      alert('Erro ao alterar senha')
+    if (newPassword.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres')
       return
     }
 
-    alert('Senha alterada com sucesso!')
-    setNewPassword('')
-    setConfirmPassword('')
+    setLoading(true)
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      console.log('SESSION:', session)
+      console.log('SESSION ERROR:', sessionError)
+
+      if (sessionError || !session) {
+        alert('Sessão não encontrada. Faça login novamente.')
+        return
+      }
+
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Tempo esgotado ao alterar senha')), 10000)
+      )
+
+      const request = supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      const result = await Promise.race([request, timeout])
+
+      console.log('RESULTADO UPDATE:', result)
+
+      if (result.error) {
+        alert('Erro ao alterar senha: ' + result.error.message)
+        return
+      }
+
+      alert('Senha alterada com sucesso!')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      console.log('ERRO:', err)
+      alert(err.message || 'Erro inesperado ao alterar senha')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSavePreferences = async () => {
+    if (!user) {
+      alert('Usuário não encontrado')
+      return
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        notifications,
+        dark_mode: darkMode,
+        public_profile: publicProfile,
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      console.log('Erro ao salvar preferências:', error)
+      alert('Erro ao salvar preferências')
+      return
+    }
+
+    alert('Preferências salvas com sucesso!')
   }
 
   const handleDeleteAccount = async () => {
@@ -58,11 +142,13 @@ function Settings() {
       </div>
 
       <div className="settings-layout">
-        {/* ALTERAR SENHA */}
         <div className="form-card">
           <h2>Alterar Senha</h2>
 
           <form onSubmit={handleChangePassword} className="auth-form">
+
+
+            
             <input
               type="password"
               placeholder="Nova senha"
@@ -77,48 +163,70 @@ function Settings() {
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
 
-            <button className="btn primary full" disabled={loading}>
+            <button type="submit" className="btn primary full" disabled={loading}>
               {loading ? 'Salvando...' : 'Alterar Senha'}
             </button>
           </form>
         </div>
 
-        {/* CONTA */}
         <div className="form-card">
           <h2>Conta</h2>
 
           <div className="settings-actions">
-            <button className="btn secondary full" onClick={signOut}>
+            <button type="button" className="btn secondary full" onClick={signOut}>
               Sair da Conta
             </button>
 
-            <button className="btn logout full" onClick={handleDeleteAccount}>
+            <button type="button" className="btn logout full" onClick={handleDeleteAccount}>
               Excluir Conta
             </button>
           </div>
         </div>
 
-        {/* PREFERÊNCIAS */}
         <div className="form-card">
           <h2>Preferências</h2>
 
           <div className="settings-options">
             <label>
-              <input type="checkbox" /> Ativar notificações
+              <input
+                type="checkbox"
+                checked={notifications}
+                onChange={(e) => setNotifications(e.target.checked)}
+              />
+              Ativar notificações
             </label>
 
             <label>
-              <input type="checkbox" /> Tema escuro
+              <input
+                type="checkbox"
+                checked={darkMode}
+                onChange={(e) => setDarkMode(e.target.checked)}
+              />
+              Tema escuro
             </label>
 
             <label>
-              <input type="checkbox" /> Perfil público
+              <input
+                type="checkbox"
+                checked={publicProfile}
+                onChange={(e) => setPublicProfile(e.target.checked)}
+              />
+              Perfil público
             </label>
           </div>
+
+          <button
+            type="button"
+            className="btn primary full"
+            onClick={handleSavePreferences}
+            style={{ marginTop: '16px' }}
+          >
+            Salvar Preferências
+          </button>
         </div>
       </div>
     </section>
   )
 }
 
-export default Settings 
+export default Settings

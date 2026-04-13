@@ -28,12 +28,6 @@ function Profile() {
       return
     }
 
-    if (error) {
-  console.log('Erro ao atualizar perfil:', error)
-  alert(error.message)
-  return
-}
-
     setSaving(true)
 
     const { error } = await supabase
@@ -86,13 +80,15 @@ function Profile() {
           <h2>Editar Perfil</h2>
 
           <form onSubmit={handleSave} className="auth-form profile-form">
-            <input
-              type="text"
-              placeholder="Seu nome"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-
+            <div className="input-group">
+  <label className="form-label">Nome</label>
+  <input
+    type="text"
+    placeholder="Digite seu nome"
+    value={name}
+    onChange={(e) => setName(e.target.value)}
+  />
+</div>
             <input
               type="text"
               placeholder="Seu telefone"

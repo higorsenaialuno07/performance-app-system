@@ -12,6 +12,8 @@ import Activities from './pages/Activities'
 import Performance from './pages/Performance'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import ForgotPassword from './pages/ForgotPassword'
+import UpdatePassword from './pages/UpdatePassword'
 
 function App() {
   return (
@@ -32,6 +34,9 @@ function App() {
               </AuthGuard>
             }
           />
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/update-password" element={<UpdatePassword />} />
 
           <Route
             path="/profile"

@@ -119,13 +119,15 @@ alert(error.message)
           <h2>Nova Atividade</h2>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <input
-              type="text"
-              placeholder="Título da atividade"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-
+            <div className="input-group">
+  <label className="form-label">Título da atividade</label>
+  <input
+    type="text"
+    placeholder="Digite a atividade"
+    value={title}
+    onChange={(e) => setTitle(e.target.value)}
+  />
+</div>
             <textarea
               placeholder="Descrição da atividade"
               value={description}
