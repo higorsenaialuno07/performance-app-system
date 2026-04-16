@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 function Navbar() {
@@ -9,17 +9,17 @@ function Navbar() {
       <div className="logo">⚡ Performance</div>
 
       <nav className="nav-links">
-        <Link to="/">Início</Link>
+        <NavLink to="/">Início</NavLink>
 
         {user ? (
           <>
-            <Link to="/dashboard">Dashboard</Link>
-            <Link to="/profile">Perfil</Link>
-            <Link to="/goals">Metas</Link>
-            <Link to="/activities">Atividades</Link>
-            <Link to="/performance">Desempenho</Link>
-            <Link to="/reports">Relatórios</Link>
-            <Link to="/settings">Configurações</Link>
+            <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/profile">Perfil</NavLink>
+            <NavLink to="/goals">Metas</NavLink>
+            <NavLink to="/activities">Atividades</NavLink>
+            <NavLink to="/performance">Desempenho</NavLink>
+            <NavLink to="/reports">Relatórios</NavLink>
+            <NavLink to="/settings">Configurações</NavLink>
 
             <span className="user-name">{profile?.name || 'Usuário'}</span>
 
@@ -29,10 +29,10 @@ function Navbar() {
           </>
         ) : (
           <>
-            <Link to="/login">Login</Link>
-            <Link to="/register" className="btn primary">
+            <NavLink to="/login">Login</NavLink>
+            <NavLink to="/register" className="btn primary">
               Criar Conta
-            </Link>
+            </NavLink>
           </>
         )}
       </nav>

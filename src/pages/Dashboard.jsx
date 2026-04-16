@@ -13,8 +13,13 @@ function Dashboard() {
     completedActivities: 0,
     totalPerformanceRecords: 0,
     averageScore: 0,
+    pendingGoals: 0,
+    pendingActivities: 0,
+    bestScore: 0,
   })
 
+  const [recentGoals, setRecentGoals] = useState([])
+  const [recentActivities, setRecentActivities] = useState([])
   const [dashboardLoading, setDashboardLoading] = useState(true)
 
   const fetchDashboardData = async () => {
@@ -22,20 +27,35 @@ function Dashboard() {
 
     setDashboardLoading(true)
 
-    const { data: goalsData, error: goalsError } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('user_id', user.id)
+    const [
+      goalsResponse,
+      activitiesResponse,
+      performanceResponse,
+      recentGoalsResponse,
+      recentActivitiesResponse,
+    ] = await Promise.all([
+      supabase.from('goals').select('*').eq('user_id', user.id),
+      supabase.from('activities').select('*').eq('user_id', user.id),
+      supabase.from('performance_records').select('*').eq('user_id', user.id),
+      supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3),
+    ])
 
-    const { data: activitiesData, error: activitiesError } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('user_id', user.id)
-
-    const { data: performanceData, error: performanceError } = await supabase
-      .from('performance_records')
-      .select('*')
-      .eq('user_id', user.id)
+    const { data: goalsData, error: goalsError } = goalsResponse
+    const { data: activitiesData, error: activitiesError } = activitiesResponse
+    const { data: performanceData, error: performanceError } = performanceResponse
+    const { data: recentGoalsData } = recentGoalsResponse
+    const { data: recentActivitiesData } = recentActivitiesResponse
 
     if (goalsError || activitiesError || performanceError) {
       alert('Erro ao carregar dados da dashboard')
@@ -46,10 +66,12 @@ function Dashboard() {
     const totalGoals = goalsData?.length || 0
     const completedGoals =
       goalsData?.filter((goal) => goal.status === 'concluída').length || 0
+    const pendingGoals = totalGoals - completedGoals
 
     const totalActivities = activitiesData?.length || 0
     const completedActivities =
       activitiesData?.filter((activity) => activity.status === 'concluída').length || 0
+    const pendingActivities = totalActivities - completedActivities
 
     const totalPerformanceRecords = performanceData?.length || 0
     const totalScore =
@@ -57,7 +79,12 @@ function Dashboard() {
 
     const averageScore =
       totalPerformanceRecords > 0
-        ? (totalScore / totalPerformanceRecords).toFixed(1)
+        ? Number(totalScore / totalPerformanceRecords).toFixed(1)
+        : 0
+
+    const bestScore =
+      totalPerformanceRecords > 0
+        ? Math.max(...performanceData.map((item) => Number(item.score) || 0))
         : 0
 
     setStats({
@@ -67,8 +94,13 @@ function Dashboard() {
       completedActivities,
       totalPerformanceRecords,
       averageScore,
+      pendingGoals,
+      pendingActivities,
+      bestScore,
     })
 
+    setRecentGoals(recentGoalsData || [])
+    setRecentActivities(recentActivitiesData || [])
     setDashboardLoading(false)
   }
 
@@ -80,11 +112,24 @@ function Dashboard() {
     return <p style={{ padding: '20px' }}>Carregando dashboard...</p>
   }
 
+  const goalsProgress =
+    stats.totalGoals > 0
+      ? Math.round((stats.completedGoals / stats.totalGoals) * 100)
+      : 0
+
+  const activitiesProgress =
+    stats.totalActivities > 0
+      ? Math.round((stats.completedActivities / stats.totalActivities) * 100)
+      : 0
+
   return (
     <section className="page page-column">
       <div className="section-header">
         <h1>Dashboard</h1>
-        <p>Visualize o resumo completo da sua conta no sistema Performance.</p>
+        <p>
+          Acompanhe seu progresso, visualize indicadores e acesse rapidamente as
+          principais áreas do sistema.
+        </p>
       </div>
 
       <div className="dashboard-full-layout">
@@ -113,6 +158,11 @@ function Dashboard() {
             </div>
 
             <div className="dashboard-card">
+              <h3>Metas Pendentes</h3>
+              <p>{stats.pendingGoals}</p>
+            </div>
+
+            <div className="dashboard-card">
               <h3>Total de Atividades</h3>
               <p>{stats.totalActivities}</p>
             </div>
@@ -123,6 +173,11 @@ function Dashboard() {
             </div>
 
             <div className="dashboard-card">
+              <h3>Atividades Pendentes</h3>
+              <p>{stats.pendingActivities}</p>
+            </div>
+
+            <div className="dashboard-card">
               <h3>Registros de Desempenho</h3>
               <p>{stats.totalPerformanceRecords}</p>
             </div>
@@ -130,6 +185,11 @@ function Dashboard() {
             <div className="dashboard-card">
               <h3>Média de Desempenho</h3>
               <p>{stats.averageScore}</p>
+            </div>
+
+            <div className="dashboard-card">
+              <h3>Melhor Resultado</h3>
+              <p>{stats.bestScore}</p>
             </div>
           </div>
 
@@ -184,6 +244,44 @@ function Dashboard() {
             <p>
               O sistema está <strong>online</strong> e funcionando normalmente.
             </p>
+          </div>
+
+          <div className="dashboard-summary-card form-card">
+            <h2>Progresso Atual</h2>
+
+            <p><strong>Metas concluídas:</strong> {goalsProgress}%</p>
+            <p><strong>Atividades concluídas:</strong> {activitiesProgress}%</p>
+            <p><strong>Média de desempenho:</strong> {stats.averageScore}</p>
+          </div>
+
+          <div className="dashboard-summary-card form-card">
+            <h2>Últimas Metas</h2>
+
+            {recentGoals.length === 0 ? (
+              <p>Nenhuma meta recente cadastrada.</p>
+            ) : (
+              recentGoals.map((goal) => (
+                <div key={goal.id} style={{ marginBottom: '12px' }}>
+                  <p><strong>{goal.title}</strong></p>
+                  <p>Status: {goal.status}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="dashboard-summary-card form-card">
+            <h2>Últimas Atividades</h2>
+
+            {recentActivities.length === 0 ? (
+              <p>Nenhuma atividade recente cadastrada.</p>
+            ) : (
+              recentActivities.map((activity) => (
+                <div key={activity.id} style={{ marginBottom: '12px' }}>
+                  <p><strong>{activity.title}</strong></p>
+                  <p>Status: {activity.status}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

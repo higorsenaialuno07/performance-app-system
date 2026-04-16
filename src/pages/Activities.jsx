@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../services/supabase'
 
@@ -11,6 +11,9 @@ function Activities() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('todas')
+
   const fetchActivities = async () => {
     if (!user) return
 
@@ -22,12 +25,12 @@ function Activities() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-      if (error) {
-  console.log('Erro ao buscar atividades:', error)
-  alert(error.message)
-  setLoading(false)
-  return
-}
+    if (error) {
+      console.log('Erro ao buscar atividades:', error)
+      alert(error.message)
+      setLoading(false)
+      return
+    }
 
     setActivities(data || [])
     setLoading(false)
@@ -55,8 +58,8 @@ function Activities() {
     const { error } = await supabase.from('activities').insert([
       {
         user_id: user.id,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim() || null,
         status: 'pendente',
       },
     ])
@@ -65,7 +68,7 @@ function Activities() {
 
     if (error) {
       console.log(error)
-alert(error.message)
+      alert(error.message)
       return
     }
 
@@ -84,7 +87,7 @@ alert(error.message)
       .eq('id', id)
 
     if (error) {
-      alert('Erro ao excluir atividade')
+      alert('Erro ao excluir atividade: ' + error.message)
       return
     }
 
@@ -100,12 +103,32 @@ alert(error.message)
       .eq('id', id)
 
     if (error) {
-  console.log('Erro ao cadastrar atividade:', error)
-  alert(error.message)
-  return
-}
+      console.log('Erro ao cadastrar atividade:', error)
+      alert(error.message)
+      return
+    }
+
     fetchActivities()
   }
+
+  const filteredActivities = useMemo(() => {
+    return activities.filter((activity) => {
+      const matchesSearch =
+        activity.title?.toLowerCase().includes(search.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(search.toLowerCase())
+
+      const matchesStatus =
+        statusFilter === 'todas' ? true : activity.status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [activities, search, statusFilter])
+
+  const totalActivities = activities.length
+  const completedActivities =
+    activities.filter((activity) => activity.status === 'concluída').length
+  const pendingActivities =
+    activities.filter((activity) => activity.status !== 'concluída').length
 
   return (
     <section className="page page-column activities-page">
@@ -114,26 +137,47 @@ alert(error.message)
         <p>Cadastre, acompanhe e conclua suas atividades no sistema Performance.</p>
       </div>
 
+      <div className="dashboard-grid dashboard-grid-extended">
+        <div className="dashboard-card">
+          <h3>Total de Atividades</h3>
+          <p>{totalActivities}</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Atividades Concluídas</h3>
+          <p>{completedActivities}</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Atividades Pendentes</h3>
+          <p>{pendingActivities}</p>
+        </div>
+      </div>
+
       <div className="goals-layout">
         <div className="form-card goals-form-card">
           <h2>Nova Atividade</h2>
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="input-group">
-  <label className="form-label">Título da atividade</label>
-  <input
-    type="text"
-    placeholder="Digite a atividade"
-    value={title}
-    onChange={(e) => setTitle(e.target.value)}
-  />
-</div>
-            <textarea
-              placeholder="Descrição da atividade"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows="4"
-            />
+              <label className="form-label">Título da atividade</label>
+              <input
+                type="text"
+                placeholder="Digite a atividade"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label className="form-label">Descrição</label>
+              <textarea
+                placeholder="Descrição da atividade"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows="4"
+              />
+            </div>
 
             <button type="submit" className="btn primary full" disabled={saving}>
               {saving ? 'Salvando...' : 'Adicionar Atividade'}
@@ -142,15 +186,40 @@ alert(error.message)
         </div>
 
         <div className="list-card goals-list-card">
-          <h2>Lista de Atividades</h2>
+          <div className="list-card-header">
+            <div>
+              <h2>Lista de Atividades</h2>
+              <p className="field-hint">
+                Acompanhe a execução das tarefas do seu dia a dia.
+              </p>
+            </div>
+          </div>
+
+          <div className="filters-row">
+            <input
+              type="text"
+              placeholder="Buscar atividade por título ou descrição"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="todas">Todas</option>
+              <option value="pendente">Pendentes</option>
+              <option value="concluída">Concluídas</option>
+            </select>
+          </div>
 
           {loading ? (
             <p>Carregando atividades...</p>
-          ) : activities.length === 0 ? (
-            <p>Nenhuma atividade cadastrada ainda.</p>
+          ) : filteredActivities.length === 0 ? (
+            <p>Nenhuma atividade encontrada.</p>
           ) : (
             <div className="goals-list">
-              {activities.map((activity) => (
+              {filteredActivities.map((activity) => (
                 <div key={activity.id} className="goal-item">
                   <div className="goal-top">
                     <h3>{activity.title}</h3>

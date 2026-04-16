@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../services/supabase'
 
@@ -11,6 +11,8 @@ function Performance() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('todos')
 
   const fetchPerformanceRecords = async () => {
     if (!user) return
@@ -56,7 +58,7 @@ function Performance() {
       {
         user_id: user.id,
         score: Number(score),
-        observation,
+        observation: observation.trim() || null,
       },
     ])
 
@@ -73,7 +75,9 @@ function Performance() {
   }
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Deseja excluir este registro de desempenho?')
+    const confirmDelete = window.confirm(
+      'Deseja excluir este registro de desempenho?'
+    )
     if (!confirmDelete) return
 
     const { error } = await supabase
@@ -89,18 +93,38 @@ function Performance() {
     fetchPerformanceRecords()
   }
 
-const totalRecords = records.length
-const totalScore = records.reduce((acc, item) => acc + (Number(item.score) || 0), 0)
-const averageScore = totalRecords > 0 ? (totalScore / totalRecords).toFixed(1) : 0
-const bestScore = totalRecords > 0 ? Math.max(...records.map((item) => Number(item.score) || 0)) : 0
-const lastScore = totalRecords > 0 ? records[0].score : 0
+  const getStatus = (scoreValue) => {
+    if (scoreValue >= 90) return 'Excelente'
+    if (scoreValue >= 70) return 'Bom'
+    if (scoreValue >= 50) return 'Regular'
+    return 'Ruim'
+  }
 
-const getStatus = (score) => {
-  if (score >= 90) return 'Excelente'
-  if (score >= 70) return 'Bom'
-  if (score >= 50) return 'Regular'
-  return 'Ruim'
-}
+  const filteredRecords = useMemo(() => {
+    return records.filter((record) => {
+      const recordStatus = getStatus(Number(record.score))
+      const matchesSearch = record.observation
+        ?.toLowerCase()
+        .includes(search.toLowerCase()) || !search
+      const matchesStatus =
+        statusFilter === 'todos' ? true : recordStatus === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [records, search, statusFilter])
+
+  const totalRecords = records.length
+  const totalScore = records.reduce(
+    (acc, item) => acc + (Number(item.score) || 0),
+    0
+  )
+  const averageScore =
+    totalRecords > 0 ? (totalScore / totalRecords).toFixed(1) : 0
+  const bestScore =
+    totalRecords > 0
+      ? Math.max(...records.map((item) => Number(item.score) || 0))
+      : 0
+  const lastScore = totalRecords > 0 ? records[0].score : 0
 
   return (
     <section className="page page-column">
@@ -115,22 +139,26 @@ const getStatus = (score) => {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="input-group">
-  <label className="form-label">Pontuação</label>
-  <input
-    type="number"
-    min="0"
-    max="100"
-    placeholder="Digite uma pontuação de 0 a 100"
-    value={score}
-    onChange={(e) => setScore(e.target.value)}
-  />
-</div>
-            <textarea
-              placeholder="Observação sobre o desempenho"
-              value={observation}
-              onChange={(e) => setObservation(e.target.value)}
-              rows="4"
-            />
+              <label className="form-label">Pontuação</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                placeholder="Digite uma pontuação de 0 a 100"
+                value={score}
+                onChange={(e) => setScore(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label className="form-label">Observação</label>
+              <textarea
+                placeholder="Observação sobre o desempenho"
+                value={observation}
+                onChange={(e) => setObservation(e.target.value)}
+                rows="4"
+              />
+            </div>
 
             <button type="submit" className="btn primary full" disabled={saving}>
               {saving ? 'Salvando...' : 'Registrar Desempenho'}
@@ -162,31 +190,58 @@ const getStatus = (score) => {
           </div>
 
           <div className="list-card performance-list-card">
-            <h2>Histórico de Desempenho</h2>
+            <div className="list-card-header">
+              <div>
+                <h2>Histórico de Desempenho</h2>
+                <p className="field-hint">
+                  Consulte registros, resultados e observações salvas.
+                </p>
+              </div>
+            </div>
+
+            <div className="filters-row">
+              <input
+                type="text"
+                placeholder="Buscar por observação"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="todos">Todos</option>
+                <option value="Excelente">Excelente</option>
+                <option value="Bom">Bom</option>
+                <option value="Regular">Regular</option>
+                <option value="Ruim">Ruim</option>
+              </select>
+            </div>
 
             {loading ? (
               <p>Carregando registros...</p>
-            ) : records.length === 0 ? (
-              <p>Nenhum registro de desempenho cadastrado ainda.</p>
+            ) : filteredRecords.length === 0 ? (
+              <p>Nenhum registro de desempenho encontrado.</p>
             ) : (
               <div className="performance-list">
-                {records.map((record) => (
+                {filteredRecords.map((record) => (
                   <div key={record.id} className="goal-item">
                     <div className="goal-top">
                       <h3>Pontuação: {record.score}</h3>
                       <span
-  className={
-    record.score >= 90
-      ? 'status-badge status-excelente'
-      : record.score >= 70
-      ? 'status-badge status-bom'
-      : record.score >= 50
-      ? 'status-badge status-regular'
-      : 'status-badge status-ruim'
-  }
->
-  {getStatus(record.score)}
-</span> 
+                        className={
+                          record.score >= 90
+                            ? 'status-badge status-excelente'
+                            : record.score >= 70
+                            ? 'status-badge status-bom'
+                            : record.score >= 50
+                            ? 'status-badge status-regular'
+                            : 'status-badge status-ruim'
+                        }
+                      >
+                        {getStatus(record.score)}
+                      </span>
                     </div>
 
                     <p className="goal-description">
